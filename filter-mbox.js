@@ -38,14 +38,20 @@ function processMbox(mboxPath, condition) {
 	readStream.on("end", () => reader.close());
 
 	let didEmailMatch = false;
-	const matchHeaders = headers => {
+	const matchHeaders = (fromLine, headers) => {
 		const conditional = eval(condition);
 
 		let parsedHeaders = mimelib.parseHeaders(headers);
-		if (parsedHeaders.date) parsedHeaders.date = MailParser.prototype._parseDateString(parsedHeaders.date[0]);
+		if (parsedHeaders.date) {
+			parsedHeaders.date = MailParser.prototype._parseDateString(parsedHeaders.date[0]);
+		} else {
+			const possibleDate = fromLine.split(" ").slice(2).join(" ");
+			parsedHeaders.date = MailParser.prototype._parseDateString(possibleDate);
+		}
 
 		didEmailMatch = conditional(parsedHeaders);
 		if (didEmailMatch) {
+			printLine(fromLine, "binary");
 			printLine(headers, "binary");
 
 			if (mboxPath !== "-" && headers.indexOf("\nX-Was-Archived-At:") === -1) {
@@ -57,18 +63,19 @@ function processMbox(mboxPath, condition) {
 	};
 
 	let inProgressHeaders = "";
+	let fromLine = "";
 	let isReadingHeaders = true;
 	reader.on("line", line => {
 		if (line.indexOf("From ") === 0) {
 			isReadingHeaders = true;
 			inProgressHeaders = "";
 
-			printLine(line, "binary");
+			fromLine = line;
 		} else if (isReadingHeaders) {
 			if (line.length === 0) {
 				isReadingHeaders = false;
 
-				matchHeaders(inProgressHeaders);
+				matchHeaders(fromLine, inProgressHeaders);
 			} else {
 				line = line + "\n";
 				inProgressHeaders += line;
