@@ -54,6 +54,20 @@ function processMbox(mboxPath, condition) {
 			parsedHeaders.date = MailParser.prototype._parseDateString(possibleDate);
 
 			if (!parsedHeaders.date) {
+				let errorMessage = parsedHeaders.subject ?
+					`Email in ${mboxPath} had no recognized date with subject: ${parsedHeaders.subject}.` :
+					(
+						previousSubject ?
+						`Email in ${mboxPath} with non-existent subject had no recognized date, previous email subject: ${previousSubject}.` :
+						`Email in ${mboxPath} with non-existent subject had no recognized date and no previous subject was recorded.`
+					);
+
+				if (previousDate) errorMessage += `Date for this email will be: ${previousDate}`;
+
+				process.stderr.write(`${errorMessage}\n`, "binary");
+			}
+
+			if (!parsedHeaders.date && previousDate) {
 				parsedHeaders.date = previousDate;
 			}
 		}
@@ -119,25 +133,11 @@ function date(from, to) { // eslint-disable-line no-unused-vars
 	const toMoment = Moment(to, format);
 
 	return (mboxPath, email) => {
-		if (!email || !email.date) {
-			let errorMessage = email.subject ?
-				`Email in ${mboxPath} had no recognized date with subject: ${email.subject}` :
-				(
-					previousSubject ?
-					`Email in ${mboxPath} with non-existent subject had no recognized date, previous email subject: ${previousSubject}` :
-					`Email in ${mboxPath} with non-existent subject had no recognized date and no previous subject was recorded.`
-				);
+		const emailDate = Moment(email.date);
+		const isBetweenExclusive = emailDate.isBetween(fromMoment, toMoment);
+		const isAtEdge = emailDate.isSame(fromMoment) || emailDate.isSame(toMoment);
 
-			process.stderr.write(`${errorMessage}\n`, "binary");
-
-			return false;
-		} else {
-			const emailDate = Moment(email.date);
-			const isBetweenExclusive = emailDate.isBetween(fromMoment, toMoment);
-			const isAtEdge = emailDate.isSame(fromMoment) || emailDate.isSame(toMoment);
-
-			return isBetweenExclusive || isAtEdge; // Inclusive range
-		}
+		return isBetweenExclusive || isAtEdge; // Inclusive range
 	};
 }
 
