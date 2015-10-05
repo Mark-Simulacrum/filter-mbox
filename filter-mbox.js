@@ -42,15 +42,15 @@ function processMbox(mboxPath, condition) {
 		const conditional = eval(condition);
 
 		let parsedHeaders = mimelib.parseHeaders(headers);
-		parsedHeaders.date = MailParser.prototype._parseDateString(parsedHeaders.date[0]);
+		if (parsedHeaders.date) parsedHeaders.date = MailParser.prototype._parseDateString(parsedHeaders.date[0]);
 
 		didEmailMatch = conditional(parsedHeaders);
 		if (didEmailMatch) {
 			printLine(headers, "binary");
 
-			// if (mboxPath !== "-" && headers.indexOf("\nX-Was-Archived-At:") === -1) {
-			// 	printLine("X-Was-Archived-At: " + mboxPath, "binary");
-			// }
+			if (mboxPath !== "-" && headers.indexOf("\nX-Was-Archived-At:") === -1) {
+				printLine("X-Was-Archived-At: " + mboxPath, "binary");
+			}
 
 			previousSubject = parsedHeaders.subject;
 		}
@@ -100,7 +100,7 @@ function date(from, to) { // eslint-disable-line no-unused-vars
 	return email => {
 		if (!email || !email.date) {
 			let errorMessage = email.subject ?
-				`Email with subject ${email.subject} had no recognized date.` :
+				`Email had no recognized date with subject: ${email.subject}.` :
 				(
 					previousSubject ?
 					`Email with non-existent subject had no recognized date, previous email subject: ${previousSubject}` :
