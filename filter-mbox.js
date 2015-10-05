@@ -54,10 +54,10 @@ function processMbox(mboxPath, condition) {
 		didEmailMatch = conditional(parsedHeaders);
 		if (didEmailMatch) {
 			printLine(fromLine, "binary");
-			printLine(headers, "binary");
+			process.stdout.write(headers, "binary");
 
 			if (mboxPath !== "-" && headers.indexOf("\nX-Was-Archived-At:") === -1) {
-				printLine("X-Was-Archived-At: " + mboxPath, "binary");
+				printLine("X-Was-Archived-At: " + mboxPath + "\n", "binary");
 			}
 
 			previousSubject = parsedHeaders.subject;
