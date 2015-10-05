@@ -30,7 +30,9 @@ function processMbox(mboxPath, condition) {
 	const readStream = createReadStreamFromArgument(mboxPath);
 
 	const reader = readline.createInterface({
-		input: readStream
+		input: readStream,
+		terminal: false,
+		historySize: 1
 	});
 
 	readStream.on("end", () => reader.close());
