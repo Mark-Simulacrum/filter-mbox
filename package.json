@@ -1,8 +1,8 @@
 {
   "dependencies": {
     "mailparser": "^0.5.2",
-    "moment": "^2.10.6",
-    "node-mbox": "^0.2.1"
+    "mimelib": "^0.2.19",
+    "moment": "^2.10.6"
   },
   "name": "filter-mbox",
   "version": "1.0.0",

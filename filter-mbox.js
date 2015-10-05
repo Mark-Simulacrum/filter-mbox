@@ -1,55 +1,80 @@
 #!/usr/bin/env babel-node
 
-import Mbox from "node-mbox";
 import Moment from "moment";
 import {MailParser} from "mailparser";
-
-MailParser.prototype._convertString = value => value;
+import mimelib from "mimelib";
 
 import fs from "fs";
+import readline from "readline";
 
 function createReadStreamFromArgument(argument) {
+	let stream;
 	if (argument === "-") {
-		return process.stdin;
+		stream = process.stdin;
 	} else {
-		return fs.createReadStream(argument);
+		stream = fs.createReadStream(argument);
 	}
+
+	stream.setEncoding("binary");
+
+	return stream;
 }
 
-const headerBodySplitter = /\n\r*\n/;
-function getHeaderAndBody(email) {
-	const bodyStart = email.search(headerBodySplitter);
-
-	return { headers: email.slice(0, bodyStart), body: bodyStart !== -1 ? email.slice(bodyStart) : "\n\n" };
+function printLine(line) {
+	process.stdout.write(line, "binary");
+	process.stdout.write("\n", "binary");
 }
 
+let previousSubject = null;
 function processMbox(mboxPath, condition) {
-	let mbox = new Mbox();
+	const readStream = createReadStreamFromArgument(mboxPath);
 
-	mbox.on("message", email => {
-		const { headers, body } = getHeaderAndBody(email);
-		const mailParser = new MailParser();
-
-		mailParser.on("end", parsedEmail => {
-			const conditional = eval(condition);
-
-			if (conditional(parsedEmail)) {
-				process.stdout.write(headers, "binary");
-
-				if (mboxPath !== "-" && headers.indexOf("\nX-Was-Archived-At:") === -1) {
-					process.stdout.write("\nX-Was-Archived-At: " + mboxPath, "binary");
-				}
-
-				process.stdout.write(body, "binary");
-				process.stdout.write("\n", "binary");
-			}
-		});
-
-		mailParser.write(headers);
-		mailParser.end();
+	const reader = readline.createInterface({
+		input: readStream
 	});
 
-	createReadStreamFromArgument(mboxPath).pipe(mbox);
+	readStream.on("end", () => reader.close());
+
+	let didEmailMatch = false;
+	const matchHeaders = headers => {
+		const conditional = eval(condition);
+
+		let parsedHeaders = mimelib.parseHeaders(headers);
+		parsedHeaders.date = MailParser.prototype._parseDateString(parsedHeaders.date[0]);
+
+		didEmailMatch = conditional(parsedHeaders);
+		if (didEmailMatch) {
+			printLine(headers, "binary");
+
+			// if (mboxPath !== "-" && headers.indexOf("\nX-Was-Archived-At:") === -1) {
+			// 	printLine("X-Was-Archived-At: " + mboxPath, "binary");
+			// }
+
+			previousSubject = parsedHeaders.subject;
+		}
+	};
+
+	let inProgressHeaders = "";
+	let isReadingHeaders = true;
+	reader.on("line", line => {
+		if (line.indexOf("From ") === 0) {
+			isReadingHeaders = true;
+			inProgressHeaders = "";
+
+			printLine(line, "binary");
+		} else if (isReadingHeaders) {
+			if (line.length === 0) {
+				isReadingHeaders = false;
+
+				matchHeaders(inProgressHeaders);
+			} else {
+				line = line + "\n";
+				inProgressHeaders += line;
+			}
+		} else if (didEmailMatch) {
+			printLine(line, "binary");
+		}
+	});
 }
 
 function usage() {
@@ -72,16 +97,24 @@ function date(from, to) { // eslint-disable-line no-unused-vars
 
 	return email => {
 		if (!email || !email.date) {
-			process.stderr.write(`Email with ${
-				email.subject ? "subject" : "non-existent subject"
-			}${email.subject ? (` "` + email.subject + `"`) : ""} had no recognized date.\n`, "binary");
+			let errorMessage = email.subject ?
+				`Email with subject ${email.subject} had no recognized date.` :
+				(
+					previousSubject ?
+					`Email with non-existent subject had no recognized date, previous email subject: ${previousSubject}` :
+					`Email with non-existent subject had no recognized date and no previous subject was recorded.`
+				);
+
+			process.stderr.write(`${errorMessage}\n`, "binary");
+
+			return false;
+		} else {
+			const emailDate = Moment(email.date);
+			const isBetweenExclusive = emailDate.isBetween(fromMoment, toMoment);
+			const isAtEdge = emailDate.isSame(fromMoment) || emailDate.isSame(toMoment);
+
+			return isBetweenExclusive || isAtEdge; // Inclusive range
 		}
-
-		const emailDate = Moment(email.date);
-		const isBetweenExclusive = emailDate.isBetween(fromMoment, toMoment);
-		const isAtEdge = emailDate.isSame(fromMoment) || emailDate.isSame(toMoment);
-
-		return isBetweenExclusive || isAtEdge; // Inclusive range
 	};
 }
 
