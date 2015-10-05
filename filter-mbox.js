@@ -66,9 +66,10 @@ function processMbox(mboxPath, condition) {
 
 	let inProgressHeaders = "";
 	let fromLine = "";
+	let sawBlankline = true;
 	let isReadingHeaders = true;
 	reader.on("line", line => {
-		if (line.indexOf("From ") === 0) {
+		if (line.indexOf("From ") === 0 && sawBlankline) {
 			isReadingHeaders = true;
 			inProgressHeaders = "";
 
@@ -85,6 +86,8 @@ function processMbox(mboxPath, condition) {
 		} else if (didEmailMatch) {
 			printLine(line, "binary");
 		}
+
+		sawBlankline = line.length === 0;
 	});
 }
 
