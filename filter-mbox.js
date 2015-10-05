@@ -51,7 +51,7 @@ function processMbox(mboxPath, condition) {
 			parsedHeaders.date = MailParser.prototype._parseDateString(possibleDate);
 		}
 
-		didEmailMatch = conditional(parsedHeaders);
+		didEmailMatch = conditional(mboxPath, parsedHeaders);
 		if (didEmailMatch) {
 			printLine(fromLine, "binary");
 			process.stdout.write(headers, "binary");
@@ -109,14 +109,14 @@ function date(from, to) { // eslint-disable-line no-unused-vars
 	const fromMoment = Moment(from, format);
 	const toMoment = Moment(to, format);
 
-	return email => {
+	return (mboxPath, email) => {
 		if (!email || !email.date) {
 			let errorMessage = email.subject ?
-				`Email had no recognized date with subject: ${email.subject}.` :
+				`Email in ${mboxPath} had no recognized date with subject: ${email.subject}` :
 				(
 					previousSubject ?
-					`Email with non-existent subject had no recognized date, previous email subject: ${previousSubject}` :
-					`Email with non-existent subject had no recognized date and no previous subject was recorded.`
+					`Email in ${mboxPath} with non-existent subject had no recognized date, previous email subject: ${previousSubject}` :
+					`Email in ${mboxPath} with non-existent subject had no recognized date and no previous subject was recorded.`
 				);
 
 			process.stderr.write(`${errorMessage}\n`, "binary");
