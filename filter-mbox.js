@@ -41,7 +41,7 @@ function processMbox(mboxPath, condition) {
 	const matchHeaders = (fromLine, headers) => {
 		const conditional = eval(condition);
 
-		let parsedHeaders = mimelib.parseHeaders(headers);
+		let parsedHeaders = mimelib.parseHeaders(headers.replace(/^Content-Type:/i, "X-Content-Type"));
 		if (parsedHeaders.date) {
 			parsedHeaders.date = MailParser.prototype._parseDateString(parsedHeaders.date[0]);
 		}
