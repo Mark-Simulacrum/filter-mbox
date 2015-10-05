@@ -44,7 +44,9 @@ function processMbox(mboxPath, condition) {
 		let parsedHeaders = mimelib.parseHeaders(headers);
 		if (parsedHeaders.date) {
 			parsedHeaders.date = MailParser.prototype._parseDateString(parsedHeaders.date[0]);
-		} else {
+		}
+
+		if (!parsedHeaders.date) {
 			const possibleDate = fromLine.split(" ").slice(2).join(" ");
 			parsedHeaders.date = MailParser.prototype._parseDateString(possibleDate);
 		}
