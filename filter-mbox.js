@@ -38,18 +38,27 @@ function processMbox(mboxPath, condition) {
 	readStream.on("end", () => reader.close());
 
 	let didEmailMatch = false;
+	let previousDate = null;
 	const matchHeaders = (fromLine, headers) => {
 		const conditional = eval(condition);
 
 		let parsedHeaders = mimelib.parseHeaders(headers.replace(/^Content-Type:/i, "X-Content-Type"));
+
+
 		if (parsedHeaders.date) {
 			parsedHeaders.date = MailParser.prototype._parseDateString(parsedHeaders.date[0]);
 		}
 
 		if (!parsedHeaders.date) {
-			const possibleDate = fromLine.split(" ").slice(2).join(" ");
+			let possibleDate = fromLine.split(" ").slice(2).join(" ");
 			parsedHeaders.date = MailParser.prototype._parseDateString(possibleDate);
+
+			if (!parsedHeaders.date) {
+				parsedHeaders.date = previousDate;
+			}
 		}
+
+		if (parsedHeaders.date) previousDate = parsedHeaders.date;
 
 		didEmailMatch = conditional(mboxPath, parsedHeaders);
 		if (didEmailMatch) {
