@@ -129,15 +129,13 @@ let condition = args[0];
 
 function date(from, to) { // eslint-disable-line no-unused-vars
 	const format = "YYYY-MM-DD";
-	const fromMoment = Moment(from, format);
-	const toMoment = Moment(to, format);
+	const fromMoment = Moment(from, format).toDate();
+
+	// Always add one day to the toMoment to allow the later less than comparison to succeed correctly.
+	const toMoment = Moment(to, "format").add(1, "day").toDate();
 
 	return (mboxPath, email) => {
-		const emailDate = Moment(email.date);
-		const isBetweenExclusive = emailDate.isBetween(fromMoment, toMoment);
-		const isAtEdge = emailDate.isSame(fromMoment) || emailDate.isSame(toMoment);
-
-		return isBetweenExclusive || isAtEdge; // Inclusive range
+		return fromMoment <= email.date && email.date < toMoment;
 	};
 }
 
