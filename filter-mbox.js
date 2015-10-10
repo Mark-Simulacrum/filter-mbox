@@ -132,7 +132,7 @@ function date(from, to) { // eslint-disable-line no-unused-vars
 	const fromMoment = Moment(from, format).toDate();
 
 	// Always add one day to the toMoment to allow the later less than comparison to succeed correctly.
-	const toMoment = Moment(to, "format").add(1, "day").toDate();
+	const toMoment = Moment(to, format).add(1, "day").toDate();
 
 	return (mboxPath, email) => {
 		return fromMoment <= email.date && email.date < toMoment;
